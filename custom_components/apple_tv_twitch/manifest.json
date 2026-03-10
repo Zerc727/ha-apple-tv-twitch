@@ -1,0 +1,12 @@
+{
+  "domain": "apple_tv_twitch",
+  "name": "Apple TV Twitch",
+  "config_flow": true,
+  "iot_class": "local_push",
+  "integration_type": "device",
+  "requirements": ["pyatv==0.17.0"],
+  "documentation": "https://github.com/Zerc727/ha-apple-tv-twitch",
+  "issue_tracker": "https://github.com/Zerc727/ha-apple-tv-twitch/issues",
+  "codeowners": ["@Zerc727"],
+  "version": "1.0.0"
+}

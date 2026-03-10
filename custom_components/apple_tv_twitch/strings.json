@@ -1,0 +1,17 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Select Apple TV",
+        "description": "Choose an existing Apple TV device to enable Twitch control.",
+        "data": {
+          "source_entry_id": "Apple TV Device"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Twitch control is already enabled for this Apple TV.",
+      "no_apple_tv_configured": "No Apple TV integrations found. Add the Apple TV integration first."
+    }
+  }
+}

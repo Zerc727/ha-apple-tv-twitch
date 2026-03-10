@@ -1,0 +1,11 @@
+play_channel:
+  name: Play Twitch Channel
+  description: Launches a Twitch live stream on the Apple TV via deep link.
+  fields:
+    channel_name:
+      name: Channel Name
+      description: Twitch channel name (e.g. "xqc"). No URL needed.
+      required: true
+      example: "xqc"
+      selector:
+        text:
