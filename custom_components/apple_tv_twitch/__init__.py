@@ -38,9 +38,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def handle_play_channel(call: ServiceCall) -> None:
-        # channel_name is accepted for future compatibility but Twitch's tvOS
-        # app does not support URL deep links — we open the app home screen.
-        await manager.async_open_twitch()
+        # channel_name is stored on the entity as an attribute but cannot be
+        # used for navigation — Twitch tvOS rejects all URL deep link schemes.
+        channel = call.data.get("channel_name", "").strip() or None
+        await manager.async_launch_twitch(channel)
 
     hass.services.async_register(
         DOMAIN,
@@ -140,6 +141,12 @@ class AppleTVTwitchManager:
             return
         _LOGGER.debug("Launching Twitch app (%s)", TWITCH_BUNDLE_ID)
         await self.atv.apps.launch_app(TWITCH_BUNDLE_ID)
+
+    async def async_launch_twitch(self, channel: str | None = None) -> None:
+        """Launch Twitch and notify listeners so the entity updates optimistic state."""
+        await self.async_open_twitch()
+        for cb in self._listeners:
+            cb("launched", channel)
 
     # ------------------------------------------------------------------
     # Internal helpers

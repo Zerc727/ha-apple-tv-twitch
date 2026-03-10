@@ -1,15 +1,15 @@
 play_channel:
   name: Open Twitch
   description: >
-    Opens the Twitch app on the Apple TV. The channel_name field is accepted
-    for future compatibility but is currently ignored — Twitch's tvOS app does
-    not support URL deep links to specific channels.
+    Opens the Twitch app on the Apple TV. The channel_name is stored as an
+    entity attribute and shown as media_title for reference, but the app
+    always opens to its home screen — Twitch tvOS has no URL deep link support.
   fields:
     channel_name:
       name: Channel Name
       description: >
-        Twitch channel name (e.g. "xqc"). Currently unused — the app opens to
-        its home screen regardless. Kept for future compatibility.
+        Twitch channel name (e.g. "xqc"). Stored as the last-requested channel
+        attribute. The app opens to Twitch home regardless.
       required: false
       example: "xqc"
       selector:

@@ -57,21 +57,37 @@ The primary use case is **opening Twitch from HA automations or a dashboard butt
 
 A `media_player.apple_tv_twitch` entity is created per device.
 
-| State  | Meaning                              |
-|--------|--------------------------------------|
-| `off`  | Not connected to Apple TV            |
-| `idle` | Connected (Twitch may or may not be open — detection not possible on modern tvOS) |
+| State     | Meaning |
+|-----------|---------|
+| `off`     | Not connected to Apple TV |
+| `idle`    | Connected, Twitch not recently opened |
+| `playing` | Twitch was opened in the last 5 minutes (optimistic) |
+
+State is **optimistic**: it shows `playing` for 5 minutes after the last launch call, then reverts to `idle`. Active app detection is not possible on modern tvOS.
 
 Pressing **Play** on the entity card opens the Twitch app.
 
+`media_title` shows the last-requested channel name (e.g. `xqc`) when provided. The `last_channel` and `launched_at` extra attributes are also available for use in automations and templates.
+
 ### Service: `apple_tv_twitch.play_channel`
 
-Opens the Twitch app on the Apple TV.
+Opens the Twitch app. The optional channel name is stored as an attribute.
 
 ```yaml
 service: apple_tv_twitch.play_channel
 data:
-  channel_name: xqc   # accepted but currently ignored — see Known Limitations
+  channel_name: xqc
+```
+
+### Standard `media_player.play_media` also works
+
+```yaml
+service: media_player.play_media
+target:
+  entity_id: media_player.living_room_twitch
+data:
+  media_content_type: app
+  media_content_id: xqc
 ```
 
 ### Automation Example
@@ -98,8 +114,18 @@ tap_action:
   action: call-service
   service: apple_tv_twitch.play_channel
   data:
-    channel_name: ""
+    channel_name: xqc
 icon: mdi:twitch
+```
+
+### Template: Is Twitch playing?
+
+```yaml
+# True for 5 minutes after last launch
+{{ is_state('media_player.living_room_twitch', 'playing') }}
+
+# What channel was last opened
+{{ state_attr('media_player.living_room_twitch', 'last_channel') }}
 ```
 
 ---
