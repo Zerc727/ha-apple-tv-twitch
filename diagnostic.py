@@ -6,7 +6,7 @@ Run this while Twitch is open on your Apple TV to discover:
   - Whether content_identifier or any Playing field contains channel info
 
 Usage:
-    python diagnostic.py <apple_tv_ip>
+    python diagnostic.py <apple_tv_ip> [companion_credentials]
 
 Requires pyatv:
     pip install pyatv
@@ -16,15 +16,17 @@ import asyncio
 import sys
 
 
-async def run(ip: str) -> None:
+async def run(ip: str, companion_creds: str | None = None) -> None:
     try:
         import pyatv
+        from pyatv.const import Protocol
     except ImportError:
         print("ERROR: pyatv not installed. Run: pip install pyatv")
         sys.exit(1)
 
     print(f"\n=== Scanning for Apple TV at {ip} ===\n")
-    results = await pyatv.scan(hosts=[ip], timeout=5)
+    loop = asyncio.get_event_loop()
+    results = await pyatv.scan(hosts=[ip], timeout=5, loop=loop)
 
     if not results:
         print("ERROR: No Apple TV found at that address.")
@@ -35,8 +37,15 @@ async def run(ip: str) -> None:
     print(f"  Address:  {conf.address}")
     print(f"  Services: {[str(s.protocol) for s in conf.services]}\n")
 
-    print("=== Connecting (no credentials required for read) ===\n")
-    loop = asyncio.get_event_loop()
+    if companion_creds:
+        svc = conf.get_service(Protocol.Companion)
+        if svc:
+            conf.set_credentials(Protocol.Companion, companion_creds)
+            print("  Companion credentials applied.\n")
+        else:
+            print("  WARNING: Companion service not found on this device.\n")
+
+    print("=== Connecting ===\n")
     atv = await pyatv.connect(conf, loop)
 
     try:
@@ -99,10 +108,12 @@ async def run(ip: str) -> None:
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        print(f"Usage: python {sys.argv[0]} <apple_tv_ip>")
+    if len(sys.argv) < 2 or len(sys.argv) > 3:
+        print(f"Usage: python {sys.argv[0]} <apple_tv_ip> [companion_credentials]")
         sys.exit(1)
-    asyncio.run(run(sys.argv[1]))
+    ip = sys.argv[1]
+    creds = sys.argv[2] if len(sys.argv) == 3 else None
+    asyncio.run(run(ip, creds))
 
 
 if __name__ == "__main__":

@@ -15,9 +15,10 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = "apple_tv_twitch"
 PLATFORMS = [Platform.MEDIA_PLAYER]
 
-# Update this after running diagnostic.py with Twitch open on your Apple TV.
-# Common value: "tv.twitch.live.tv"
-TWITCH_BUNDLE_ID = "tv.twitch.live.tv"
+# Confirmed via diagnostic.py on tvOS 26.3 (Apple TV 4K gen 3).
+# NOTE: Deep links (twitch://stream/<channel>) are NOT supported by Twitch's
+# tvOS app. The service opens the Twitch app to its home screen only.
+TWITCH_BUNDLE_ID = "tv.twitch"
 
 RECONNECT_DELAY = 30  # seconds between reconnect attempts
 
@@ -28,7 +29,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = manager
 
-    # Start background connection; raises ConfigEntryNotReady if initial connect fails
     try:
         await manager.async_connect()
     except Exception as err:
@@ -38,8 +38,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def handle_play_channel(call: ServiceCall) -> None:
-        channel = call.data["channel_name"].strip()
-        await manager.async_play_channel(channel)
+        # channel_name is accepted for future compatibility but Twitch's tvOS
+        # app does not support URL deep links — we open the app home screen.
+        await manager.async_open_twitch()
 
     hass.services.async_register(
         DOMAIN,
@@ -110,7 +111,6 @@ class AppleTVTwitchManager:
             self._listeners.append(callback)
 
     def unregister_listener(self, callback: Callable) -> None:
-        self._listeners.discard(callback) if hasattr(self._listeners, "discard") else None
         try:
             self._listeners.remove(callback)
         except ValueError:
@@ -119,7 +119,6 @@ class AppleTVTwitchManager:
     async def async_connect(self) -> None:
         """Perform initial connection (raises on failure)."""
         await self._do_connect()
-        # Start background reconnect loop
         self._connect_task = self.hass.async_create_background_task(
             self._connect_loop(), "apple_tv_twitch_reconnect"
         )
@@ -134,14 +133,13 @@ class AppleTVTwitchManager:
                 pass
         self._close_atv()
 
-    async def async_play_channel(self, channel: str) -> None:
-        """Launch a Twitch channel via deep link on the Apple TV."""
+    async def async_open_twitch(self) -> None:
+        """Launch the Twitch app on the Apple TV."""
         if self.atv is None:
-            _LOGGER.error("Cannot play channel — not connected to Apple TV")
+            _LOGGER.error("Cannot open Twitch — not connected to Apple TV")
             return
-        url = f"twitch://stream/{channel}"
-        _LOGGER.debug("Launching deep link: %s", url)
-        await self.atv.apps.launch_app(url)
+        _LOGGER.debug("Launching Twitch app (%s)", TWITCH_BUNDLE_ID)
+        await self.atv.apps.launch_app(TWITCH_BUNDLE_ID)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -167,7 +165,9 @@ class AppleTVTwitchManager:
             raise RuntimeError("pyatv is not installed") from err
 
         address = self.entry.data["address"]
-        results = await pyatv.scan(hosts=[address], timeout=5)
+        results = await pyatv.scan(
+            hosts=[address], timeout=5, loop=asyncio.get_event_loop()
+        )
         if not results:
             raise RuntimeError(f"No Apple TV found at {address}")
 
@@ -197,7 +197,6 @@ class AppleTVTwitchManager:
         self.atv = atv
         _LOGGER.info("Connected to Apple TV at %s", address)
 
-        # Notify listeners of successful (re)connection
         for cb in self._listeners:
             cb("connected", None)
 

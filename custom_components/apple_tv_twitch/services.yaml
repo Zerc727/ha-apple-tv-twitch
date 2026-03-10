@@ -1,11 +1,16 @@
 play_channel:
-  name: Play Twitch Channel
-  description: Launches a Twitch live stream on the Apple TV via deep link.
+  name: Open Twitch
+  description: >
+    Opens the Twitch app on the Apple TV. The channel_name field is accepted
+    for future compatibility but is currently ignored — Twitch's tvOS app does
+    not support URL deep links to specific channels.
   fields:
     channel_name:
       name: Channel Name
-      description: Twitch channel name (e.g. "xqc"). No URL needed.
-      required: true
+      description: >
+        Twitch channel name (e.g. "xqc"). Currently unused — the app opens to
+        its home screen regardless. Kept for future compatibility.
+      required: false
       example: "xqc"
       selector:
         text:
